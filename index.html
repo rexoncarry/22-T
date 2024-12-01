@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorization Redirect</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .status {
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Authorization Redirect</h1>
+    <div id="status" class="status">Processing...</div>
+
+    <script>
+        // Parse query parameters
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            const result = {};
+            for (const [key, value] of params.entries()) {
+                result[key] = value;
+            }
+            return result;
+        }
+
+        // Process redirect data
+        (function handleRedirect() {
+            const params = getQueryParams();
+            const statusDiv = document.getElementById('status');
+
+            if (params.error) {
+                // If there's an error parameter, show it
+                statusDiv.textContent = `Error: ${params.error_description || params.error}`;
+                statusDiv.classList.add('error');
+            } else if (params.code) {
+                // If authorization code is present
+                statusDiv.textContent = "Authorization successful! Redirecting...";
+                statusDiv.classList.add('success');
+
+                // Send the code to your backend for token exchange
+                fetch('/exchange-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: params.code })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusDiv.textContent = "Token exchanged successfully!";
+                        console.log("Access Token:", data.access_token); // For debugging
+                    } else {
+                        throw new Error(data.message || "Token exchange failed");
+                    }
+                })
+                .catch(error => {
+                    statusDiv.textContent = `Error: ${error.message}`;
+                    statusDiv.classList.add('error');
+                });
+            } else {
+                // No recognizable parameters
+                statusDiv.textContent = "Invalid response from the authorization server.";
+                statusDiv.classList.add('error');
+            }
+        })();
+    </script>
+</body>
+</html>
